@@ -252,7 +252,7 @@ namespace HexPrintFile
                 : "Note: Strings are all ZERO INDEXED");
             Console.WriteLine("");
 
-            OutputHeader(mainImage, zeroImage);
+            OutputHeader(ref mainImage, zeroImage);
             
             try
             {
@@ -316,17 +316,21 @@ namespace HexPrintFile
                 return false;
             }
             
-            OutputHeader(mainImage, zeroImage);
+            OutputHeader(ref mainImage, zeroImage);
             return true;
         }
 
         /// <summary>
         /// Outputs the header for the HEX print
         /// </summary>
-        /// <param name="mainImage">Main byte range image</param>
+        /// <param name="mainImage" ref="true">Main byte range image</param>
         /// <param name="zeroImage">Zero count byte range image</param>
-        private static void OutputHeader(string mainImage, string zeroImage)
+        private static void OutputHeader(ref string mainImage, string zeroImage)
         {
+            // Main heading minimum = 14
+            if (mainImage.Length < 5) {
+                mainImage = "00000";
+            }
             var mainLen = ((2 * mainImage.Length) + 4) + 1;
             var mainHeading = "ACTUAL BYTES";
             while (mainHeading.Length < mainLen) {

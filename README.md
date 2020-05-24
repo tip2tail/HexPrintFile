@@ -29,6 +29,10 @@
 </p>
 
 <!-- ABOUT THE PROJECT -->
+## Changelog
+
+View the changes to this project: [Changelog](./CHANGES.md).
+
 ## Screenshot
 
 <img src="screen.png" alt="Screenshot">
@@ -105,7 +109,22 @@ Contributions are what make the open source community such an amazing place to b
 4. Push to the Branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
+## Build Release Version
 
+To build a release version use the following commands.
+
+- Windows
+````
+dotnet publish -c Release --self-contained -r win-x64 /p:PublishSingleFile=true
+````
+- Linux
+````
+dotnet publish -c Release --self-contained -r linux-x64 /p:PublishSingleFile=true
+````
+- macOS
+````
+dotnet publish -c Release --self-contained -r osx-x64 /p:PublishSingleFile=true
+````
 
 <!-- LICENSE -->
 ## License
