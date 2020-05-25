@@ -58,15 +58,16 @@ A tool to print the hex representation of a file, or portion of a file
 Usage: HexPrintFile [options] <file>
 
 Arguments:
-  file                      File to hex print
+  file                          File to hex print
 
 Options:
-  -?|-h|--help              Show help information
-  -s|--start-byte <BYTE>    Byte to start reading from. 0 if excluded. Counted from index 0.
-  -e|--end-byte <BYTE>      Byte to read to (inclusive). Reads to EOF if excluded. Counted from index 0. Cannot be used with -c.
-  -c|--count-bytes <COUNT>  Returns X bytes from start byte (if provided). Cannot be used with -e.
-  -x|--extended             Use extended ASCII characters in output.
-  -o|--index-from-one       Index the bytes from 1 rather than 0.
+  -?|-h|--help                  Show help information
+  -s|--start-byte <BYTE>        Byte to start reading from. 0 if excluded. Counted from index 0.
+  -e|--end-byte <BYTE>          Byte to read to (inclusive). Reads to EOF if excluded. Counted from index 0. Cannot be used with -c.
+  -c|--count-bytes <COUNT>      Returns X bytes from start byte (if provided). Cannot be used with -e.
+  -r|--read-chunk-size <BYTES>  Sets the chunk size. Minimum 4, Maximum 64. Default is 16.
+  -x|--extended                 Use extended ASCII characters in output.
+  -o|--index-from-one           Index the bytes from 1 rather than 0.
 
 > ----------------------------------------------------
 > Created by Mark Young
@@ -83,9 +84,11 @@ Options:
 > 7: End byte less than start byte
 > 8: Command line parsing exception
 > 9: Start byte is less than one and index from one mode enabled
+> 10: Read block size cannot be less than 4 bytes
+> 11: Read block size cannot be more than 64 bytes
 > ----------------------------------------------------
-> Version:   1.0.0
-> Buid Date: 2020-05-23 01:36:55
+> Version:   1.1.1
+> Buid Date: 2020-05-25 11:49:45
 > ----------------------------------------------------
 ````
 
@@ -109,6 +112,10 @@ Contributions are what make the open source community such an amazing place to b
 4. Push to the Branch (`git push origin feature/AmazingFeature`)
 5. Open a Pull Request
 
+## Contributors
+- Mark Young (tip2tail)
+
+
 ## Build Release Version
 
 To build a release version use the following commands.
@@ -128,17 +135,11 @@ dotnet publish -c Release --self-contained -r osx-x64 /p:PublishSingleFile=true
 
 <!-- LICENSE -->
 ## License
-
 Distributed under the MIT License. See `LICENSE` for more information.
 
-
-
 <!-- CONTACT -->
-## Contact
-
-Your Name - [@tip2tail](https://twitter.com/tip2tail)
-
-Project Link: [https://github.com/tip2tail/HexPrintFile](https://github.com/tip2tail/HexPrintFile)
+## Project Owner
+Mark Young - [@tip2tail](https://twitter.com/tip2tail)
 
 <!-- MARKDOWN LINKS & IMAGES -->
 <!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
