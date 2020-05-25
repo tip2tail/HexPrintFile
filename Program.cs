@@ -35,6 +35,10 @@ namespace HexPrintFile
             COMMAND_EXCEPTION = 8,
             [Description("Start byte is less than one and index from one mode enabled")]
             START_LESS_ONE = 9,
+            [Description("Read block size cannot be less than 4 bytes")]
+            CHUNK_LESS_THAN_MINIMUM = 10,
+            [Description("Read block size cannot be more than 64 bytes")]
+            CHUNK_MORE_THAN_MAXIMUM = 11,
         }
         
         // Read in 16 byte chunks
@@ -98,6 +102,9 @@ namespace HexPrintFile
             var opCountBytes = app.Option<long>("-c|--count-bytes <COUNT>",
                 "Returns X bytes from start byte (if provided). Cannot be used with -e.",
                 CommandOptionType.SingleValue);
+            var opChunkBytes = app.Option<uint>("-r|--read-chunk-size <BYTES>",
+                "Sets the chunk size.  Minimum 4, Maximum 64.  Default is 16.",
+                CommandOptionType.SingleValue);
             var opUseExtendedChars = app.Option<bool>("-x|--extended",
                 "Use extended ASCII characters in output.",
                 CommandOptionType.NoValue);
@@ -126,6 +133,23 @@ namespace HexPrintFile
 
                 // Index from one?
                 var indexFromOne = opIndexFromOne.HasValue();
+
+                // Set the chunk size
+                uint chunkSize = 16;
+                if (opChunkBytes.HasValue())
+                {
+                    if (opChunkBytes.ParsedValue < 4)
+                    {
+                        Console.WriteLine("ERROR: Read block size cannot be less than 4 bytes.");
+                        return (int)ReturnCode.CHUNK_LESS_THAN_MINIMUM;
+                    }
+                    if (opChunkBytes.ParsedValue > 64)
+                    {
+                        Console.WriteLine("ERROR: Read block size cannot be greater than 64 bytes.");
+                        return (int)ReturnCode.CHUNK_MORE_THAN_MAXIMUM;
+                    }
+                    chunkSize = opChunkBytes.ParsedValue;
+                }
 
                 // Validate if we have a start and end
                 long startAt = 0;
@@ -190,7 +214,7 @@ namespace HexPrintFile
                 var useExtended = opUseExtendedChars.HasValue();
                 
                 // We have validated our inputs, pass for processing
-                if (ExecuteHexPrint(fileName.Value, startAt, endAt, fileSize, useExtended, indexFromOne)) return 0;
+                if (ExecuteHexPrint(fileName.Value, startAt, endAt, fileSize, useExtended, indexFromOne, chunkSize)) return 0;
                 
                 Console.WriteLine("ERROR: Cannot display data.");
                 return (int)ReturnCode.GENERAL_ERROR;
@@ -214,22 +238,25 @@ namespace HexPrintFile
         /// <param name="fileSize">Full file size in bytes</param>
         /// <param name="useExtended">Use extended raw text output</param>
         /// <param name="indexFromOne">Should the counts be indexed from 1 or 0</param>
+        /// <param name="chunkSize">Chunk size to read data in</param>
         /// <returns>TRUE on success</returns>
         private static bool ExecuteHexPrint(string fileName,
                                             long startAt,
                                             long endAt,
                                             long fileSize, 
                                             bool useExtended,
-                                            bool indexFromOne)
+                                            bool indexFromOne,
+                                            uint chunkSize)
         {
-            var block = new byte[ChunkSize];
+            int chunkSizeInt = Convert.ToInt32(chunkSize);
+            var block = new byte[chunkSizeInt];
             var toRead = endAt - startAt;
 
-            // We read in chunks (set above at 16, however may be changed in future)
+            // We read in chunks (default 16)
             // So we need to work out how many chunks will give us our data
-            // The result is that we may read up to 15 bytes extra - so be it!
-            var actualBytesRead = Math.Min(((toRead - 1) | (ChunkSize - 1)) + 1, fileSize);
-            var chunksToRead = actualBytesRead / ChunkSize;
+            // The result is that we may read up to (n-1) bytes extra - so be it!
+            var actualBytesRead = Math.Min(((toRead - 1) | (chunkSize - 1)) + 1, fileSize);
+            var chunksToRead = actualBytesRead / chunkSizeInt;
 
             var mainImage = StringLengthImage(endAt);
             var zeroImage = StringLengthImage(actualBytesRead);
@@ -243,7 +270,7 @@ namespace HexPrintFile
             Console.WriteLine("Start At Byte:     " + (indexFromOne ? (startAt+1).ToString(mainImage) : startAt.ToString(mainImage)));
             Console.WriteLine("End At Byte:       " + (indexFromOne ? (endAt+1).ToString(mainImage) : endAt.ToString(mainImage)));
             Console.WriteLine("Bytes to read:     " + toRead.ToString());
-            Console.WriteLine("Chunk size:        " + ChunkSize + " bytes");
+            Console.WriteLine("Chunk size:        " + chunkSizeInt + " bytes");
             Console.WriteLine("Actual total read: " + actualBytesRead + " bytes");
             Console.WriteLine("Chunks:            " + chunksToRead);
             Console.WriteLine("");
@@ -252,7 +279,7 @@ namespace HexPrintFile
                 : "Note: Strings are all ZERO INDEXED");
             Console.WriteLine("");
 
-            OutputHeader(ref mainImage, zeroImage);
+            OutputHeader(chunkSizeInt, ref mainImage, zeroImage);
             
             try
             {
@@ -263,13 +290,13 @@ namespace HexPrintFile
                 }
                 stream.Seek(startAt, SeekOrigin.Begin);
 
-                var byteEnd = (startAt + ChunkSize) - 1;
+                var byteEnd = (startAt + chunkSizeInt) - 1;
                 var fromZeroStart = 0;
-                var fromZeroEnd = ChunkSize - 1;
+                var fromZeroEnd = chunkSizeInt - 1;
                 var chunksRead = 0;
 
                 int bytesRead;
-                while ((bytesRead = stream.Read(block, 0, ChunkSize)) > 0)
+                while ((bytesRead = stream.Read(block, 0, chunkSizeInt)) > 0)
                 {
 
                     if (chunksRead >= chunksToRead)
@@ -279,14 +306,14 @@ namespace HexPrintFile
                     
                     var hexString = BitConverter.ToString(block).Replace("-", " ");
                     var rawString = AsciiOctets2String(block, useExtended);
-                    if (bytesRead != ChunkSize)
+                    if (bytesRead != chunkSizeInt)
                     {
                         // To tidy this up remove the 00 bytes that we did not read
                         var endIndex = (bytesRead * 3) - 1;
                         hexString = hexString.Substring(0, endIndex);
-                        hexString = hexString.PadRight((ChunkSize * 3) - 1);
+                        hexString = hexString.PadRight((chunkSizeInt * 3) - 1);
                         rawString = rawString.Substring(0, bytesRead);
-                        rawString = rawString.PadRight(ChunkSize);
+                        rawString = rawString.PadRight(chunkSizeInt);
                     }
 
                     string outputString;
@@ -303,10 +330,10 @@ namespace HexPrintFile
 
                     Console.WriteLine(outputString);
 
-                    startAt += ChunkSize;
-                    byteEnd += ChunkSize;
-                    fromZeroStart += ChunkSize;
-                    fromZeroEnd += ChunkSize;
+                    startAt += chunkSizeInt;
+                    byteEnd += chunkSizeInt;
+                    fromZeroStart += chunkSizeInt;
+                    fromZeroEnd += chunkSizeInt;
                     chunksRead++;
                 }
             }
@@ -315,17 +342,17 @@ namespace HexPrintFile
                 Console.WriteLine("EXCEPTION: " + exception.Message);
                 return false;
             }
-            
-            OutputHeader(ref mainImage, zeroImage);
+            OutputHeader(chunkSizeInt, ref mainImage, zeroImage);
             return true;
         }
 
         /// <summary>
         /// Outputs the header for the HEX print
         /// </summary>
+        /// <param name="chunkSize">Chunk size</param>
         /// <param name="mainImage" ref="true">Main byte range image</param>
         /// <param name="zeroImage">Zero count byte range image</param>
-        private static void OutputHeader(ref string mainImage, string zeroImage)
+        private static void OutputHeader(int chunkSize, ref string mainImage, string zeroImage)
         {
             // Main heading minimum = 14
             if (mainImage.Length < 5) {
@@ -343,7 +370,10 @@ namespace HexPrintFile
                 zeroHeading += " ";
             }
 
-            var dataLine = $"* HEX DATA                                        *   | RAW DATA         | {mainHeading} | {zeroHeading} ";
+            var dataHeading = " HEX DATA ".PadRight((chunkSize * 3) + 1);
+            var rawHeading  = " RAW DATA ".PadRight(chunkSize + 2);
+
+            var dataLine = $"*{dataHeading}*   |{rawHeading}| {mainHeading} | {zeroHeading} ";
             var equalsLine = string.Empty;
             while (equalsLine.Length < dataLine.Length) {
                 equalsLine += "=";
