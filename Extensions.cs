@@ -14,8 +14,7 @@ namespace HexPrintFile
         /// <returns>DateTime</returns>
         public static DateTime GetLinkerTimestampUtc(this Assembly assembly)
         {
-            var location = assembly.Location;
-            return GetLinkerTimestampUtcLocation(location);
+            return GetLinkerTimestampUtcLocation(Environment.ProcessPath);
         }
 
         /// <summary>

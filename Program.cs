@@ -40,9 +40,6 @@ namespace HexPrintFile
             [Description("Read block size cannot be more than 64 bytes")]
             CHUNK_MORE_THAN_MAXIMUM = 11,
         }
-        
-        // Read in 16 byte chunks
-        private const int ChunkSize = 16;
 
         private static readonly string[] ControlChars =
         {
